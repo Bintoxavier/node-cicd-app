@@ -2,7 +2,7 @@ const express = require('express');
 const app = express();
 
 app.get('/', (req, res) => {
-    res.send('padichu monne njn scna. 🚀');
+    res.send('atlast i fuckin did it 🚀');
 });
 
 app.listen(3000, () => {
