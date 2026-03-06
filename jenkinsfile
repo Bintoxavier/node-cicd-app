@@ -1,0 +1,57 @@
+pipeline {
+    agent any
+
+   
+    stages {
+
+        stage('Checkout') {
+            steps {
+               git url: "https://github.com/Bintoxavier/node-cicd-app.git", branch:"main" 
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                sh 'npm install'
+            }
+        }
+
+        stage('Test') {
+            steps {
+                sh 'npm test'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh "docker build -t node-cicd-app:latest ."
+            }
+        }
+
+       stage("push to dockerhub"){
+             steps{
+               echo "pushing the code"
+               withCredentials([usernamePassword('credentialsId':"dockerhubcred",passwordVariable:"dockerhubpass",usernameVariable:"dockerhubuser")]){
+               sh "docker login -u ${env.dockerhubuser} -p ${env.dockerhubpass} "
+               sh "docker image tag node-cicd-app:latest ${env.dockerhubuser}/node-cicd-app:latest"
+               sh "docker push ${env.dockerhubuser}/node-cicd-app:latest"
+               }
+           } 
+        }
+
+        stage('Deploy to EC2') {
+            steps {
+                sshagent(['ssh-key']) {
+                    sh """
+                    ssh -o StrictHostKeyChecking=no ubuntu@44.193.76.55 '
+                     docker pull bintoxavier/node-cicd-app:latest &&
+                    docker stop node-app || true &&
+                    docker rm node-app || true &&
+                    docker run -d -p 80:3000 --name node-app bintoxavier/node-cicd-app:latest
+                    '
+                    """
+                }
+            }
+        }
+    }
+}
